@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Packet Analyzer</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        body{
+            background-color: #ADD899;
+        }
+        h1{
+            width: 100%;
+            background-color: #FFDE95;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 20vh;
+        }
+        .btnbox{
+            background-color: #ADD899;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 10vh;
+            gap: 5vw;
+        }
+        #start-btn, #stop-btn{
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            width: 8vw;
+            height: 5vh;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #start-btn:hover, #stop-btn:hover{
+            background-color: #2980b9;
+        }
+        h2{
+            background-color: #ADD899;
+            display: flex;
+            justify-content: center;
+        }
+        .analysis{
+            margin: 0 auto;
+            width: 70%;
+        }
+        table{
+            background-color: #ADD899;
+            margin: 0 auto;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td{
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #fff;
+        }
+        th{
+            background-color: #16a085;
+            color: #fff;
+        }
+        tr:nth-child(even) {
+            background-color: #ecf0f1;
+        }
+        .filter-form {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .filter-form input, .filter-form select {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Network Packet Analyzer</h1>
+    <div class="btnbox">
+        <button id="start-btn">Start Capture</button>
+        <button id="stop-btn">Stop Capture</button>
+    </div>
+    <div class="filter-form">
+        <label for="filter-ip">IP:</label>
+        <input type="text" id="filter-ip" name="ip">
+        
+        <label for="filter-port">Port:</label>
+        <input type="text" id="filter-port" name="port">
+        
+        <label for="filter-protocol">Protocol:</label>
+        <select id="filter-protocol" name="protocol">
+            <option value="">All</option>
+            <option value="IP">IP</option>
+            <option value="TCP">TCP</option>
+            <option value="UDP">UDP</option>
+        </select>
+        <button id="apply-filter-btn">Apply Filter</button>
+    </div>
+    <h2>Captured Packets</h2>
+    <div class="analysis">
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Source IP</th>
+                    <th>Destination IP</th>
+                    <th>Protocol</th>
+                    <th>Source Port</th>
+                    <th>Destination Port</th>
+                </tr>
+            </thead>
+            <tbody id="packet-table">
+            </tbody>
+        </table>
+    </div>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            var socket = io();
+            var packets = [];
+
+            $('#start-btn').click(function(){
+                $.get('/start', function(data){
+                    console.log(data);
+                });
+            });
+
+            $('#stop-btn').click(function(){
+                $.get('/stop', function(data){
+                    console.log(data);
+                });
+            });
+
+            socket.on('new_packet', function(packet){
+                packets.push(packet);
+                addPacketToTable(packet);
+            });
+
+            $('#apply-filter-btn').click(function(){
+                filterPackets();
+            });
+
+            function addPacketToTable(packet) {
+                var row = '<tr>' +
+                    '<td>' + packet.ip_src + '</td>' +
+                    '<td>' + packet.ip_dst + '</td>' +
+                    '<td>' + packet.protocol + '</td>' +
+                    '<td>' + (packet.src_port || '') + '</td>' +
+                    '<td>' + (packet.dst_port || '') + '</td>' +
+                    '</tr>';
+                $('#packet-table').append(row);
+            }
+
+            function filterPackets() {
+                var filterIp = $('#filter-ip').val();
+                var filterPort = $('#filter-port').val();
+                var filterProtocol = $('#filter-protocol').val();
+
+                $('#packet-table').empty();
+
+                packets.forEach(function(packet){
+                    if ((!filterIp || packet.ip_src.includes(filterIp) || packet.ip_dst.includes(filterIp)) &&
+                        (!filterPort || packet.src_port == filterPort || packet.dst_port == filterPort) &&
+                        (!filterProtocol || packet.protocol === filterProtocol)) {
+                        addPacketToTable(packet);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
